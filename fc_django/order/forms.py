@@ -2,6 +2,7 @@ from django import forms
 from product.models import Product
 from fcuser.models import Fcuser
 from .models import Order
+from django.db import transaction
 
 
 class RegisterForm(forms.Form):
@@ -32,12 +33,22 @@ class RegisterForm(forms.Form):
         print(product)
         print(fcuser)
         if quantity and product and fcuser:
-            order = Order(
-                quantity=quantity,
-                product=Product.objects.get(pk=product),
-                fcuser=Fcuser.objects.get(email=fcuser),
-            )
-            order.save()
+            with transaction.atomic():
+                prod = Product.objects.get(
+                    pk=product
+                )
+                order = Order(
+                    quantity=quantity,
+                    product=Product.objects.get(
+                        pk=product
+                    ),
+                    fcuser=Fcuser.objects.get(
+                        email=fcuser
+                    ),
+                )
+                order.save()
+                prod.stock -= quantity
+                prod.save()
         else:
             self.product = product
             self.add_error("quantity", "값이 없습니다.")
